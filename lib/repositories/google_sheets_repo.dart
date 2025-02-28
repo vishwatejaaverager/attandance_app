@@ -1,4 +1,5 @@
 import 'package:emorald_attendee/models/employe_model.dart';
+import 'package:emorald_attendee/utils/utils.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,61 +12,94 @@ class GoogleSheetsRepo {
 
   Future<List<EmployeModel>> fetchAttendanceData(String datenow) async {
     try {
-      print("API call for: $datenow");
-
       final response = await http.get(
         Uri.parse(
-          'https://script.google.com/macros/s/AKfycbzmaYp_Xn-croZmhEgCqKpfnI3n63lpxFzxq8BGVfR-kud8kSgMc86apbpBPB9CKa373Q/exec?date=$datenow',
+          'https://script.google.com/macros/s/AKfycbz7yJj8w01EPZ4-a3m5APseIbWby2yVXzHgkBC4ucSd4Qx7FxkmMlYsY3dfkJV2NBU3Bw/exec?date=$datenow',
         ),
       );
-      // print("Raw Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
-        // print("Decoded JSON: $jsonData"); // Debugging
 
         if (jsonData is List) {
           final data =
               jsonData.map((item) => EmployeModel.fromJson(item)).toList();
-          // print("Parsed Employee Data: ${data.first.date}");
 
-          return data.isEmpty ? _generateDefaultData(datenow) : data;
+          return data;
         } else {
-          throw Exception("Unexpected JSON structure: $jsonData");
+          appToast("Unexpected JSON structure: $jsonData");
+          return [];
         }
       } else {
-        throw Exception('HTTP error: ${response.statusCode}');
+        appToast('HTTP error: ${response.statusCode}');
+        return [];
       }
     } catch (e) {
-      print('Error: $e');
       rethrow;
     }
   }
 
-  List<EmployeModel> _generateDefaultData(String date) {
-    print("using default");
-    const employees = [
-      'John Doe',
-      'Jane Smith',
-      'Alex Brown',
-      'Emily Davis',
-      'Michael Lee',
-      'Sarah Wilson',
-      'David Kim',
-      'Laura Adams',
-      'Chris Evans',
-      'Anna Taylor',
-    ];
-    return employees
-        .map(
-          (name) => EmployeModel(
-            date: date,
-            employeeName: name,
-            checkIn: '9:00 AM',
-            checkOut: '6:00 PM',
-            status: 'Present',
-          ),
-        )
-        .toList();
+  Future<void> addEmployee(EmployeModel employye) async {
+    final Map<String, dynamic> employeeData = employye.toJson();
+    final res = jsonEncode(employeeData);
+
+    final response = await http.post(
+      Uri.parse(
+        "https://script.google.com/macros/s/AKfycbz0Rr7aHysLLltWVpSv8iIv41irJwhwqJzhbn_WCZpT8kPo5giq3mtp975muTVrUZGy8A/exec",
+      ),
+      headers: {"Content-Type": "application/json"},
+      body: res,
+    );
+
+    if (response.statusCode == 200) {
+      appToast("Employee added: ${response.body}");
+    } else {
+      appToast("Error adding employee: ${response.body}");
+    }
+  }
+
+  Future<void> updateLoggings(EmployeModel employye) async {
+    final Map<String, dynamic> employeeData = employye.toJson();
+
+    final res = jsonEncode(employeeData);
+
+    try {
+      final response = await http.post(
+        Uri.parse(
+          "https://script.google.com/macros/s/AKfycbwnGciG941ENhDdDSERrCYojp0KIMmL1oV3-JAd2Pi6f0nY0GFEqvFIl2NKx-qi0yJtUA/exec",
+        ),
+        headers: {"Content-Type": "application/json"},
+        body: res,
+      );
+
+      if (response.statusCode == 200) {
+        appToast("Loggings updated: ${response.body}");
+      } else {
+        appToast("Error updating loggings: ${response.body}");
+      }
+    } catch (e) {
+      appToast("Exception: $e");
+    }
+  }
+
+  Future<void> removeEmploye(String employeeName) async {
+    final response = await http.post(
+      Uri.parse(
+        'https://script.google.com/macros/s/AKfycbx0OWMOUG6wiQzkhFkYu1guK2-Xt48ZHAxljJelE-NOcuHq_eKSlA1Ew4AZAEQlwSYLyw/exec',
+      ),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"name": employeeName}),
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      if (data["success"] == true) {
+        print("✅ Updated successfully!");
+      } else {
+        print("❌ Error: ${data["message"]}");
+      }
+    } else {
+      print("❌ Server error: ${response.statusCode}");
+    }
   }
 }
