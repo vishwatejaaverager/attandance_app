@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:developer';
-
 import 'package:intl/intl.dart';
 
 final GlobalKey<ScaffoldMessengerState> snackbarKey =
@@ -13,6 +11,7 @@ Widget horizontalDivider() {
   );
 }
 
+// this is universal snackbar could be used with out context
 appToast(String message) {
   snackbarKey.currentState?.showSnackBar(
     SnackBar(behavior: SnackBarBehavior.floating, content: Text(message)),
@@ -27,8 +26,46 @@ sbw(double w) {
   return SizedBox(width: w);
 }
 
-debugLog(String s) {
-  return log("vishwa : $s");
+// function to calc the hours
+bool isMoreThanNineHours(String checkIn, String checkOut) {
+  try {
+    // Define the format
+    DateFormat format = DateFormat("HH:mm");
+
+    // Parse the time strings
+    DateTime now = DateTime.now(); // Get today's date
+    DateTime inTime = format.parse(checkIn);
+    DateTime outTime = format.parse(checkOut);
+
+    // Convert to DateTime with today's date
+    DateTime fullInTime = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      inTime.hour,
+      inTime.minute,
+    );
+    DateTime fullOutTime = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      outTime.hour,
+      outTime.minute,
+    );
+
+    // Handle overnight shifts (check-out past midnight)
+    if (fullOutTime.isBefore(fullInTime)) {
+      fullOutTime = fullOutTime.add(Duration(days: 1));
+    }
+
+    // Calculate duration
+    Duration diff = fullOutTime.difference(fullInTime);
+
+    return diff.inHours > 9;
+  } catch (e) {
+    print("Error parsing time: $e");
+    return false; // Return false if parsing fails
+  }
 }
 
 /// Parses API timestamp and returns formatted time (hh:mm a)

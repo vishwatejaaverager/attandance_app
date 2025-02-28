@@ -2,14 +2,9 @@ import 'package:emorald_attendee/models/employe_model.dart';
 import 'package:emorald_attendee/utils/utils.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-final googleSheetsRepoProvider = Provider((ref) => GoogleSheetsRepo());
 
 class GoogleSheetsRepo {
-  final String apiUrl =
-      'https://script.google.com/macros/s/AKfycbzvm2f88w8mXrhhao8NqDZMCpf95ylJQpMIQM7z6pulFydWeanHPTkeo4Mxosr6EHru1Q/exec';
-
+  // function to fetch all the attendess
   Future<List<EmployeModel>> fetchAttendanceData(String datenow) async {
     try {
       final response = await http.get(
@@ -23,7 +18,10 @@ class GoogleSheetsRepo {
 
         if (jsonData is List) {
           final data =
-              jsonData.map((item) => EmployeModel.fromJson(item)).toList();
+              jsonData
+                  .map((item) => EmployeModel.fromJson(item))
+                  .where((element) => element.working)
+                  .toList();
 
           return data;
         } else {
@@ -39,6 +37,7 @@ class GoogleSheetsRepo {
     }
   }
 
+  // function to add employess
   Future<void> addEmployee(EmployeModel employye) async {
     final Map<String, dynamic> employeeData = employye.toJson();
     final res = jsonEncode(employeeData);
@@ -58,6 +57,7 @@ class GoogleSheetsRepo {
     }
   }
 
+  // function to update check in and check out times
   Future<void> updateLoggings(EmployeModel employye) async {
     final Map<String, dynamic> employeeData = employye.toJson();
 
@@ -82,6 +82,7 @@ class GoogleSheetsRepo {
     }
   }
 
+  // function to remove employee
   Future<void> removeEmploye(String employeeName) async {
     final response = await http.post(
       Uri.parse(
@@ -94,12 +95,12 @@ class GoogleSheetsRepo {
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
       if (data["success"] == true) {
-        print("✅ Updated successfully!");
+        print(" Updated successfully!");
       } else {
-        print("❌ Error: ${data["message"]}");
+        print(" Error: ${data["message"]}");
       }
     } else {
-      print("❌ Server error: ${response.statusCode}");
+      print(" Server error: ${response.statusCode}");
     }
   }
 }
